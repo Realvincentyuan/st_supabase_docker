@@ -28,6 +28,9 @@ Services started
 - `supabase-db` — PostgreSQL (initialized with `init.sql`)
 - `supabase-api` — PostgREST REST API exposing the DB (container port `3000`)
 - `streamlit-app` — Streamlit UI (host port `8501`)
+- `pgadmin` — pgAdmin dashboard for managing database (host port `5050`)
+  - Login: `admin@example.com` / `admin`
+  - Add server: Host=`supabase-db`, Port=`5432`, User=`postgres`, Password=`postgres`
 
 Environment variables
 - `SUPABASE_URL`: base URL for the API (inside Docker should be `http://supabase:3000`)
@@ -39,7 +42,47 @@ Usage
 - Add Item — create a new item (name + description)
 - View Items — list and delete items
 
+Database UI (pgAdmin)
+---------------------
+
+Quick access
+- Open: `http://localhost:5050`
+- Login: `admin@example.com` / `admin`
+
+Add the server in pgAdmin (Connection values)
+- **Name:** `supabase-db` (any friendly name)
+- **Host:** `supabase-db`
+- **Port:** `5432`
+- **Database:** `postgres`
+- **User / Password:** `postgres` / `postgres`
+
+Where to find tables
+- Servers → [your server] → Databases → `postgres` → Schemas → `public` → **Tables**
+- Right-click a table → **View Data → All Rows** to inspect contents
+
+Quick SQL (Query Tool)
+- List tables in the `public` schema:
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+```
+
+If tables don't appear
+- Refresh the server/tree in pgAdmin.
+- If `init.sql` didn't run (e.g. DB pre-existed), recreate the DB volume then restart:
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+Notes
+- Inside pgAdmin use the Docker service name `supabase-db` as the host. To connect from a desktop client instead, expose Postgres to the host (add `ports: - "5432:5432"` to the `db` service) and use `localhost:5432`.
+
+
 Commands
+---
 - Start (foreground):
 
 ```bash
