@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: supabase-db
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  supabase:
+    image: public.ecr.aws/supabase/postgrest:v12.0.1
+    container_name: supabase-api
+    ports:
+      - "54321:3000"
+    environment:
+      PGRST_DB_URI: postgres://postgres:postgres@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_JWT_SECRET: your-super-secret-jwt-secret-key-min-32-chars-long
+      PGRST_DB_ANON_ROLE: anon
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  streamlit:
+    build: .
+    container_name: streamlit-app
+    ports:
+      - "8501:8501"
+    environment:
+      - SUPABASE_URL=http://supabase:3000
+      - SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvY2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAxODAwMDAsImV4cCI6MjAwMDE4MDAwMH0.LqOpG_8YQTMU5NlXBGPiF5eEDLIrczSPsZpK8pJYlUs
+    depends_on:
+      - supabase
+    networks:
+      - app-network
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
